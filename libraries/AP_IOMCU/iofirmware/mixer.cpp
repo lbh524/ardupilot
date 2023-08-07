@@ -179,6 +179,12 @@ void AP_IOMCU_FW::run_mixer(void)
         case SRV_Channel::k_throttle:
         case SRV_Channel::k_throttleLeft:
         case SRV_Channel::k_throttleRight:
+        case SRV_Channel::k_throttleLeft1:
+        case SRV_Channel::k_throttleRight1:
+        case SRV_Channel::k_throttleLeft2:
+        case SRV_Channel::k_throttleRight2:
+        case SRV_Channel::k_throttleLeft3:
+        case SRV_Channel::k_throttleRight3:
             if (mixing.throttle_is_angle) {
                 pwm = mix_output_angle(i, throttle);
             } else {

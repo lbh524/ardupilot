@@ -1,5 +1,6 @@
 /*
   plane specific AP_AdvancedFailsafe class
+  固定翼的高级故障保护
  */
 
 #include "Plane.h"
@@ -8,6 +9,7 @@
 
 /*
   setup radio_out values for all channels to termination values
+  将所有输出通道的值设为终止值
  */
 void AP_AdvancedFailsafe_Plane::terminate_vehicle(void)
 {
@@ -19,7 +21,7 @@ void AP_AdvancedFailsafe_Plane::terminate_vehicle(void)
     }
 #endif
 
-    plane.g2.servo_channels.disable_passthrough(true);
+    plane.g2.servo_channels.disable_passthrough(true);  //禁用通道的穿透功能
     
     if (_terminate_action == TERMINATE_ACTION_LAND) {
         plane.landing.terminate();
@@ -35,15 +37,27 @@ void AP_AdvancedFailsafe_Plane::terminate_vehicle(void)
         SRV_Channels::set_output_scaled(SRV_Channel::k_rudder, SERVO_MAX);
         SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, SERVO_MAX);
         if (plane.have_reverse_thrust()) {
-            // configured for reverse thrust, use TRIM
+            // configured for reverse thrust, use TRIM  配置了反推
             SRV_Channels::set_output_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::TRIM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::TRIM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::TRIM);
         } else {
             // use MIN
             SRV_Channels::set_output_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::MIN);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::MIN);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::MIN);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::MIN);
         }
         SRV_Channels::set_output_limit(SRV_Channel::k_manual, SRV_Channel::Limit::TRIM);
         SRV_Channels::set_output_limit(SRV_Channel::k_none, SRV_Channel::Limit::TRIM);
@@ -52,7 +66,7 @@ void AP_AdvancedFailsafe_Plane::terminate_vehicle(void)
     plane.servos_output();
 
 #if HAL_QUADPLANE_ENABLED
-    plane.quadplane.afs_terminate();
+    plane.quadplane.afs_terminate(); //四旋翼固定翼的自动飞行终止
 #endif
 
     // also disarm to ensure that ignition is cut
@@ -72,11 +86,23 @@ void AP_AdvancedFailsafe_Plane::setup_IO_failsafe(void)
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::TRIM);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
     } else {
         // normal throttle, use MIN
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::MIN);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::MIN);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::MIN);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::MIN);
     }
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_manual, SRV_Channel::Limit::TRIM);
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_none, SRV_Channel::Limit::TRIM);

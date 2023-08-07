@@ -192,7 +192,7 @@ void AP_L1_Control::_prevent_indecision(float &Nu)
     }
 }
 
-// update L1 control for waypoint navigation
+// update L1 control for waypoint navigation  更新L1 control的航点
 void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min)
 {
 
@@ -213,10 +213,10 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     }
     _last_update_waypoint_us = now;
 
-    // Calculate L1 gain required for specified damping
+    // Calculate L1 gain required for specified damping  计算指定阻尼所需的L1增益
     float K_L1 = 4.0f * _L1_damping * _L1_damping;
 
-    // Get current position and velocity
+    // Get current position and velocity    获取当前飞机的位置
     if (_ahrs.get_location(_current_loc) == false) {
         // if no GPS loc available, maintain last nav/target_bearing
         _data_is_stale = true;
@@ -225,10 +225,10 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     Vector2f _groundspeed_vector = _ahrs.groundspeed_vector();
 
-    // update _target_bearing_cd
+    // update _target_bearing_cd 更新目标方位角
     _target_bearing_cd = _current_loc.get_bearing_to(next_WP);
 
-    //Calculate groundspeed
+    //Calculate groundspeed  计算地速
     float groundSpeed = _groundspeed_vector.length();
     if (groundSpeed < 0.1f) {
         // use a small ground speed vector in the right direction,
@@ -237,17 +237,17 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         _groundspeed_vector = Vector2f(cosf(get_yaw()), sinf(get_yaw())) * groundSpeed;
     }
 
-    // Calculate time varying control parameters
-    // Calculate the L1 length required for specified period
-    // 0.3183099 = 1/1/pipi
+    // Calculate time varying control parameters  计算时变控制参数
+    // Calculate the L1 length required for specified period  根据_L1_period计算特定L1长度
+    // 0.3183099 = 1/1/pipi     L1_dist = 1/π * damping * period * speed ≈ 0.3183099* damping * period * speed 
     _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
 
-    // Calculate the NE position of WP B relative to WP A
+    // Calculate the NE position of WP B relative to WP A  计算航点A与B的北东位置长度
     Vector2f AB = prev_WP.get_distance_NE(next_WP);
     float AB_length = AB.length();
 
     // Check for AB zero length and track directly to the destination
-    // if too small
+    // if too small  如果AB距离很短，那么就直接将B点记作当前目标点，径直朝向B
     if (AB.length() < 1.0e-6f) {
         AB = _current_loc.get_distance_NE(next_WP);
         if (AB.length() < 1.0e-6f) {
@@ -256,74 +256,78 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     }
     AB.normalize();
 
-    // Calculate the NE position of the aircraft relative to WP A
+    // Calculate the NE position of the aircraft relative to WP A   计算航点A到飞机的北东距离长度信息
     const Vector2f A_air = prev_WP.get_distance_NE(_current_loc);
 
-    // calculate distance to target track, for reporting
-    _crosstrack_error = A_air % AB;
+    // calculate distance to target track, for reporting  计算航迹跟踪误差，|AC|*sin(AB与AC的夹角)   即偏离航线的距离
+    _crosstrack_error = A_air % AB;//|AC|*cos(AB与AC的夹角)   即AC在AB上的投影
 
     //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
     //and further than L1 distance from WP A. Then use WP A as the L1 reference point
     //Otherwise do normal L1 guidance
-    float WP_A_dist = A_air.length();
+    float WP_A_dist = A_air.length();//向量AC的长度 |AC|
     float alongTrackDist = A_air * AB;
     if (WP_A_dist > _L1_dist && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
+    //|AC|*cos(AB与AC的夹角)/|AC|=alongTrackDist/MAX(WP_A_dist, 1.0f)
     {
+        //|AC|长度大于_L1_dist 且 AC和AB之间的夹角在+-135度之外  使用A点作为L1的参考点
         //Calc Nu to fly To WP A
-        Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
-        xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
-        ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
-        Nu = atan2f(xtrackVel,ltrackVel);
+        Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft  向量AC的单位向量
+        xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line  垂直AC向量方向的速度 
+        ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line  平行于AC向量方向的速度
+        Nu = atan2f(xtrackVel,ltrackVel);  //地速与AC向量之间的夹角
         _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
     } else if (alongTrackDist > AB_length + groundSpeed*3) {
         // we have passed point B by 3 seconds. Head towards B
-        // Calc Nu to fly To WP B
-        const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
-        Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
-        xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line
-        ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
+        // Calc Nu to fly To WP B  飞行超过B点3秒，要飞回B点，计算飞往B点的Nu（与飞往A点的计算方法一致）
+        const Vector2f B_air = next_WP.get_distance_NE(_current_loc);  //计算BC向量
+        Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft  单位化BC向量
+        xtrackVel = _groundspeed_vector % (-B_air_unit); // Velocity across line  垂直BC向量方向的速度 
+        ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line 平行于BC向量方向的速度
         Nu = atan2f(xtrackVel,ltrackVel);
         _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
-    } else { //Calc Nu to fly along AB line
+    } else { //Calc Nu to fly along AB line 否则使用正常的L1引导
 
-        //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
-        xtrackVel = _groundspeed_vector % AB; // Velocity cross track
-        ltrackVel = _groundspeed_vector * AB; // Velocity along track
-        float Nu2 = atan2f(xtrackVel,ltrackVel);
-        //Calculate Nu1 angle (Angle to L1 reference point)
-        float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);
-        //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
-        sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
+        //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)  计算飞往AB点轨迹线的Nu Nu2为速度与轨迹线之间的夹角
+        xtrackVel = _groundspeed_vector % AB; // Velocity cross track 垂直AB向量方向的速度 
+        ltrackVel = _groundspeed_vector * AB; // Velocity along track 平行于AB向量方向的速度 
+        float Nu2 = atan2f(xtrackVel,ltrackVel);  //地速与AB向量之间的夹角
+        //Calculate Nu1 angle (Angle to L1 reference point)  Nu1为飞机与L1点连线和AB轨迹线之间的夹角
+        float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);  //计算sin(Nu1)
+        //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg   //限定Nu1在45度内
+        sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);  //反三角函数计算Nu1
         float Nu1 = asinf(sine_Nu1);
 
         // compute integral error component to converge to a crosstrack of zero when traveling
         // straight but reset it when disabled or if it changes. That allows for much easier
         // tuning by having it re-converge each time it changes.
+        //如果积分参数小于零或改变，则复位积分误差值
         if (_L1_xtrack_i_gain <= 0 || !is_equal(_L1_xtrack_i_gain.get(), _L1_xtrack_i_gain_prev)) {
             _L1_xtrack_i = 0;
             _L1_xtrack_i_gain_prev = _L1_xtrack_i_gain;
-        } else if (fabsf(Nu1) < radians(5)) {
+        } else if (fabsf(Nu1) < radians(5)) {          //Nu1小于5度
             _L1_xtrack_i += Nu1 * _L1_xtrack_i_gain * dt;
 
             // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
-            _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
+            //AHRS_TRIM_X=0.1会漂移到0.08，所以0.1是最坏的情况  
+            _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);//限幅
         }
 
-        // to converge to zero we must push Nu1 harder
+        // to converge to zero we must push Nu1 harder  //为了收敛到零，我们必须更努力地推动Nu1
         Nu1 += _L1_xtrack_i;
 
         Nu = Nu1 + Nu2;
         _nav_bearing = wrap_PI(atan2f(AB.y, AB.x) + Nu1);   // bearing (radians) from AC to L1 point
     }
-
+     //如果我们在一个狭窄的角度范围内，并且转弯角度已经改变，可以使用之前的转弯决定来防止转弯时的犹豫不决
     _prevent_indecision(Nu);
     _last_Nu = Nu;
 
-    //Limit Nu to +-(pi/2)
+    //Limit Nu to +-(pi/2)  //限定Nu在+-90°
     Nu = constrain_float(Nu, -1.5708f, +1.5708f);
-    _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+    _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);//latAccDem = 4 * damping² * speed² * sin(Nu) / L1_dist .(Nu = Nu1 + Nu2)
 
-    // Waypoint capture status is always false during waypoint following
+    // Waypoint capture status is always false during waypoint following    //在跟踪Waypoint期间，Waypoint捕获状态始终为false
     _WPcircle = false;
 
     _bearing_error = Nu; // bearing error angle (radians), +ve to left of track

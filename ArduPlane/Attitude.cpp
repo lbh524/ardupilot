@@ -4,6 +4,9 @@
   calculate speed scaling number for control surfaces. This is applied
   to PIDs to change the scaling of the PID with speed. At high speed
   we move the surfaces less, and at low speeds we move them more.
+  计算速度控制通道的控制率缩放系数。
+  这适用于PID，以随速度改变PID的比例。
+  在高速时，速度改变范围小，而在低速时，速度改变范围大。
  */
 float Plane::calc_speed_scaler(void)
 {
@@ -12,7 +15,7 @@ float Plane::calc_speed_scaler(void)
         if (aspeed > auto_state.highest_airspeed && hal.util->get_soft_armed()) {
             auto_state.highest_airspeed = aspeed;
         }
-        // ensure we have scaling over the full configured airspeed
+        // ensure we have scaling over the full configured airspeed  确保在完全配置的空速上进行缩放
         const float airspeed_min = MAX(aparm.airspeed_min, MIN_AIRSPEED_MIN);
         const float scale_min = MIN(0.5, g.scaling_speed / (2.0 * aparm.airspeed_max));
         const float scale_max = MAX(2.0, g.scaling_speed / (0.7 * airspeed_min));
@@ -26,13 +29,14 @@ float Plane::calc_speed_scaler(void)
 #if HAL_QUADPLANE_ENABLED
         if (quadplane.in_vtol_mode() && hal.util->get_soft_armed()) {
             // when in VTOL modes limit surface movement at low speed to prevent instability
+            // 当处于垂直起降模式时，限制地面低速移动以防止不稳定
             float threshold = airspeed_min * 0.5;
             if (aspeed < threshold) {
                 float new_scaler = linear_interpolate(0.001, g.scaling_speed / threshold, aspeed, 0, threshold);
                 speed_scaler = MIN(speed_scaler, new_scaler);
 
                 // we also decay the integrator to prevent an integrator from before
-                // we were at low speed persistint at high speed
+                // we were at low speed persistint at high speed  逐渐减小积分系数，以防止积分器在低速时出现过大的情况
                 rollController.decay_I();
                 pitchController.decay_I();
                 yawController.decay_I();
@@ -40,18 +44,20 @@ float Plane::calc_speed_scaler(void)
         }
 #endif
     } else if (hal.util->get_soft_armed()) {
-        // scale assumed surface movement using throttle output
+        // scale assumed surface movement using throttle output  使用油门输出缩放速度面
         float throttle_out = MAX(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle), 1);
         speed_scaler = sqrtf(THROTTLE_CRUISE / throttle_out);
-        // This case is constrained tighter as we don't have real speed info
+        // This case is constrained tighter as we don't have real speed info  这种情况的约束更严格，因为我们没有真正的速度信息
         speed_scaler = constrain_float(speed_scaler, 0.6f, 1.67f);
     } else {
-        // no speed estimate and not armed, use a unit scaling
+        // no speed estimate and not armed, use a unit scaling  没有速度估计，没有解锁，使用单位缩放
         speed_scaler = 1;
     }
     if (!plane.ahrs.airspeed_sensor_enabled()  && 
         (plane.g2.flight_options & FlightOptions::SURPRESS_TKOFF_SCALING) &&
-        (plane.flight_stage == AP_Vehicle::FixedWing::FLIGHT_TAKEOFF)) { //scaling is surpressed during climb phase of automatic takeoffs with no airspeed sensor being used due to problems with inaccurate airspeed estimates
+        (plane.flight_stage == AP_Vehicle::FixedWing::FLIGHT_TAKEOFF)) { 
+        //scaling is surpressed during climb phase of automatic takeoffs with no airspeed sensor being used due to problems with inaccurate airspeed estimates
+        //在自动起飞的爬升阶段，由于空速估计不准确的问题，在没有使用空速传感器的情况下，缩放被抑制
         return MIN(speed_scaler, 1.0f) ;
     }
     return speed_scaler;
@@ -59,11 +65,13 @@ float Plane::calc_speed_scaler(void)
 
 /*
   return true if the current settings and mode should allow for stick mixing
+   如果当前设置和模式应允许驾驶杆混合，则返回true
  */
 bool Plane::stick_mixing_enabled(void)
 {
     if (!rc().has_valid_input()) {
         // never stick mix without valid RC
+        // 在没有有效RC输入的情况下，禁止摇杆混合
         return false;
     }
 #if AP_FENCE_ENABLED
@@ -74,7 +82,7 @@ bool Plane::stick_mixing_enabled(void)
 #if HAL_QUADPLANE_ENABLED
     if (control_mode == &mode_qrtl &&
         quadplane.poscontrol.get_state() >= QuadPlane::QPOS_POSITION1) {
-        // user may be repositioning
+        // user may be repositioning  
         return false;
     }
     if (quadplane.in_vtol_land_poscontrol()) {
@@ -107,14 +115,18 @@ bool Plane::stick_mixing_enabled(void)
   this is the main roll stabilization function. It takes the
   previously set nav_roll calculates roll servo_out to try to
   stabilize the plane at the given roll
+    这是主要的滚转稳定功能。
+    它需要前置设置的nav_roll计算滚转伺服输出，
+    以尝试将飞机稳定在给定的滚转。
  */
 void Plane::stabilize_roll(float speed_scaler)
 {
     if (fly_inverted()) {
         // we want to fly upside down. We need to cope with wrap of
-        // the roll_sensor interfering with wrap of nav_roll, which
+        // the roll_sensor interfering with wrap of nav_roll, which      这是主要的滚转稳定功能。
+        // 在该飞行状态下，需要处理roll_sensor的极点和nav_roll的极点干扰问题，如果该问题处理不当，会给控制器解算带来混乱
         // would really confuse the PID code. The easiest way to
-        // handle this is to ensure both go in the same direction from
+        // handle this is to ensure both go in the same direction from 处理这一问题的最简单方法是确保两者从零开始朝同一方向前进。
         // zero
         nav_roll_cd += 18000;
         if (ahrs.roll_sensor < 0) nav_roll_cd -= 36000;
@@ -128,11 +140,12 @@ float Plane::stabilize_roll_get_roll_out(float speed_scaler)
 {
 #if HAL_QUADPLANE_ENABLED
     if (!quadplane.use_fw_attitude_controllers()) {
-        // use the VTOL rate for control, to ensure consistency
+        // use the VTOL rate for control, to ensure consistency 使用垂直起降控制律进行控制，以确保一致性
         const auto &pid_info = quadplane.attitude_control->get_rate_roll_pid().get_pid_info();
         const float roll_out = rollController.get_rate_out(degrees(pid_info.target), speed_scaler);
         /* when slaving fixed wing control to VTOL control we need to decay the integrator to prevent
            opposing integrators balancing between the two controllers
+         当从固定翼控制转向垂直起降控制时，需要减小积分器，以防止两个控制器之间的相对积分器对消
         */
         rollController.decay_I();
         return roll_out;
@@ -151,6 +164,9 @@ float Plane::stabilize_roll_get_roll_out(float speed_scaler)
   this is the main pitch stabilization function. It takes the
   previously set nav_pitch and calculates servo_out values to try to
   stabilize the plane at the given attitude.
+    这是主要的俯仰稳定功能。
+    它使用先前设置的nav_pitch并计算servo_out值，
+    以尝试将飞机稳定在给定姿态。
  */
 void Plane::stabilize_pitch(float speed_scaler)
 {
@@ -170,11 +186,11 @@ float Plane::stabilize_pitch_get_pitch_out(float speed_scaler)
 {
 #if HAL_QUADPLANE_ENABLED
     if (!quadplane.use_fw_attitude_controllers()) {
-        // use the VTOL rate for control, to ensure consistency
+        // use the VTOL rate for control, to ensure consistency 使用垂直起降控制律进行控制，以确保一致性
         const auto &pid_info = quadplane.attitude_control->get_rate_pitch_pid().get_pid_info();
         const int32_t pitch_out = pitchController.get_rate_out(degrees(pid_info.target), speed_scaler);
         /* when slaving fixed wing control to VTOL control we need to decay the integrator to prevent
-           opposing integrators balancing between the two controllers
+           opposing integrators balancing between the two controllers   当从固定翼控制转向垂直起降控制时，我们需要衰减积分器，以防止两个控制器之间的对消
         */
         pitchController.decay_I();
         return pitch_out;
@@ -197,6 +213,11 @@ float Plane::stabilize_pitch_get_pitch_out(float speed_scaler)
        - throttle stick at zero thrust
        - in fixed wing non auto-throttle mode
     */
+      /* 下列情形下，强制着陆俯仰值：
+        -飞行高度突变
+        -零推力时的油门杆
+        -固定翼非自动油门模式
+    */
     if (!quadplane_in_transition &&
         !control_mode->is_vtol_mode() &&
         !control_mode->does_auto_throttle() &&
@@ -211,6 +232,7 @@ float Plane::stabilize_pitch_get_pitch_out(float speed_scaler)
 
 /*
   this gives the user control of the aircraft in stabilization modes
+  这使得用户可以在稳定模式下控制飞机
  */
 void Plane::stabilize_stick_mixing_direct()
 {
@@ -240,6 +262,7 @@ void Plane::stabilize_stick_mixing_direct()
 
     if ((control_mode == &mode_loiter) && (plane.g2.flight_options & FlightOptions::ENABLE_LOITER_ALT_CONTROL)) {
         // loiter is using altitude control based on the pitch stick, don't use it again here
+        // 定高模式使用的是基于俯仰杆的高度控制，这里不要使用
         return;
     }
 
@@ -251,6 +274,7 @@ void Plane::stabilize_stick_mixing_direct()
 /*
   this gives the user control of the aircraft in stabilization modes
   using FBW style controls
+   这使得用户可以使用FBW控制方式在稳定模式下控制飞机
  */
 void Plane::stabilize_stick_mixing_fbw()
 {
@@ -279,6 +303,9 @@ void Plane::stabilize_stick_mixing_fbw()
     // non-linear and ends up as 2x the maximum, to ensure that
     // the user can direct the plane in any direction with stick
     // mixing.
+    //做FBW控制模式的摇杆操纵混合。我们不会线性地对待它。
+    //然而。对于高达最大值一半的输入，我们对nav_roll和nav_pitch使用线性加法。
+    //高于此值，它变为非线性，最终达到最大值的2倍，以确保用户可以使用棒混合将平面指向任何方向。
     float roll_input = channel_roll->norm_input();
     if (roll_input > 0.5f) {
         roll_input = (3*roll_input - 1);
@@ -316,7 +343,11 @@ void Plane::stabilize_stick_mixing_fbw()
 
     - hold a specific heading with ground steering
     - rate controlled with ground steering
-    - yaw control for coordinated flight    
+    - yaw control for coordinated flight 
+    稳定航向轴。有三种操作模式：
+      -用地面转向保持特定航向
+      -地面转向速率控制
+      -协调飞行偏航控制   
  */
 void Plane::stabilize_yaw(float speed_scaler)
 {
@@ -326,10 +357,11 @@ void Plane::stabilize_yaw(float speed_scaler)
     } else {
         // otherwise use ground steering when no input control and we
         // are below the GROUND_STEER_ALT
+        // 当没有输入控制并且我们处于 GROUND_STEER_ALT以下时，使用地面转向
         steering_control.ground_steering = (channel_roll->get_control_in() == 0 && 
                                             fabsf(relative_altitude) < g.ground_steer_alt);
         if (!landing.is_ground_steering_allowed()) {
-            // don't use ground steering on landing approach
+            // don't use ground steering on landing approach  着陆进近时不使用地面转向
             steering_control.ground_steering = false;
         }
     }
@@ -340,6 +372,9 @@ void Plane::stabilize_yaw(float speed_scaler)
       wheel. We use "course hold" mode for the rudder when either performing
       a flare (when the wings are held level) or when in course hold in
       FBWA mode (when we are below GROUND_STEER_ALT)
+      首先计算steering_control。
+      地面航向控制为前轮或尾轮转向。
+      当执行拉平（当机翼保持水平时）或在FBWA模式下保持航向时（当我们低于GROUND_STEER_ALT时），我们对方向舵使用“航向保持”模式
      */
     if (landing.is_flaring() ||
         (steer_state.hold_course_cd != -1 && steering_control.ground_steering)) {
@@ -350,13 +385,14 @@ void Plane::stabilize_yaw(float speed_scaler)
 
     /*
       now calculate steering_control.rudder for the rudder
+      计算 steering_control.方向控制采用方向舵
      */
     calc_nav_yaw_coordinated(speed_scaler);
 }
 
 
 /*
-  a special stabilization function for training mode
+  a special stabilization function for training mode  计算 steering_control.方向控制采用方向舵
  */
 void Plane::stabilize_training(float speed_scaler)
 {
@@ -369,7 +405,7 @@ void Plane::stabilize_training(float speed_scaler)
         stabilize_roll(speed_scaler);
         if ((nav_roll_cd > 0 && rexpo < SRV_Channels::get_output_scaled(SRV_Channel::k_aileron)) ||
             (nav_roll_cd < 0 && rexpo > SRV_Channels::get_output_scaled(SRV_Channel::k_aileron))) {
-            // allow user to get out of the roll
+            // allow user to get out of the roll  计算那些需要保持
             SRV_Channels::set_output_scaled(SRV_Channel::k_aileron, rexpo);
         }
     }
@@ -380,7 +416,7 @@ void Plane::stabilize_training(float speed_scaler)
         stabilize_pitch(speed_scaler);
         if ((nav_pitch_cd > 0 && pexpo < SRV_Channels::get_output_scaled(SRV_Channel::k_elevator)) ||
             (nav_pitch_cd < 0 && pexpo > SRV_Channels::get_output_scaled(SRV_Channel::k_elevator))) {
-            // allow user to get back to level
+            // allow user to get back to level   允许返回水平
             SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, pexpo);
         }
     }
@@ -391,7 +427,7 @@ void Plane::stabilize_training(float speed_scaler)
 
 /*
   this is the ACRO mode stabilization function. It does rate
-  stabilization on roll and pitch axes
+  stabilization on roll and pitch axes  这是ACRO模式稳定功能。它可以在滚转和俯仰轴上实现速率稳定。
  */
 void Plane::stabilize_acro(float speed_scaler)
 {
@@ -401,7 +437,7 @@ void Plane::stabilize_acro(float speed_scaler)
     float pitch_rate = (pexpo/SERVO_MAX) * g.acro_pitch_rate;
 
     /*
-      check for special roll handling near the pitch poles
+      check for special roll handling near the pitch poles 检查俯仰中立点特殊的滚转保持
      */
     if (g.acro_locking && is_zero(roll_rate)) {
         /*
@@ -425,6 +461,7 @@ void Plane::stabilize_acro(float speed_scaler)
         /*
           aileron stick is non-zero, use pure rate control until the
           user releases the stick
+           副翼操纵杆非零，使用纯速率控制，直到用户松开操纵杆
          */
         acro_state.locked_roll = false;
         SRV_Channels::set_output_scaled(SRV_Channel::k_aileron, rollController.get_rate_out(roll_rate,  speed_scaler));
@@ -595,11 +632,11 @@ void Plane::calc_throttle()
 }
 
 /*****************************************
-* Calculate desired roll/pitch/yaw angles (in medium freq loop)
+* Calculate desired roll/pitch/yaw angles (in medium freq loop)  计算期望的滚转/俯仰/偏航角
 *****************************************/
 
 /*
-  calculate yaw control for coordinated flight
+  calculate yaw control for coordinated flight 协调飞行时计算偏航控制输出
  */
 void Plane::calc_nav_yaw_coordinated(float speed_scaler)
 {
@@ -610,12 +647,14 @@ void Plane::calc_nav_yaw_coordinated(float speed_scaler)
     bool using_rate_controller = false;
 
     // Received an external msg that guides yaw in the last 3 seconds?
+    // 在最后3秒内是否收到引导航向的外部消息
     if (control_mode->is_guided_mode() &&
             plane.guided_state.last_forced_rpy_ms.z > 0 &&
             millis() - plane.guided_state.last_forced_rpy_ms.z < 3000) {
         commanded_rudder = plane.guided_state.forced_rpy_cd.z;
     } else if (control_mode == &mode_autotune && g.acro_yaw_rate > 0 && yawController.rate_control_enabled()) {
         // user is doing an AUTOTUNE with yaw rate control
+        // 在最后3秒内是否收到引导航向的外部消息
         const float rudd_expo = rudder_in_expo(true);
         const float yaw_rate = (rudd_expo/SERVO_MAX) * g.acro_yaw_rate;
         // add in the corrdinated turn yaw rate to make it easier to fly while tuning the yaw rate controller
@@ -629,7 +668,7 @@ void Plane::calc_nav_yaw_coordinated(float speed_scaler)
 
         commanded_rudder = yawController.get_servo_out(speed_scaler, disable_integrator);
 
-        // add in rudder mixing from roll
+        // add in rudder mixing from roll  添加方向舵控制到滚转通道
         commanded_rudder += SRV_Channels::get_output_scaled(SRV_Channel::k_aileron) * g.kff_rudder_mix;
         commanded_rudder += rudder_in;
     }
@@ -645,12 +684,12 @@ void Plane::calc_nav_yaw_coordinated(float speed_scaler)
 }
 
 /*
-  calculate yaw control for ground steering with specific course
- */
+  calculate yaw control for ground steering with specific course  计算地面转向的航向控制
+ */ 
 void Plane::calc_nav_yaw_course(void)
 {
     // holding a specific navigation course on the ground. Used in
-    // auto-takeoff and landing
+    // auto-takeoff and landing  
     int32_t bearing_error_cd = nav_controller->bearing_error_cd();
     steering_control.steering = steerController.get_steering_out_angle_error(bearing_error_cd);
     if (stick_mixing_enabled()) {
@@ -783,6 +822,10 @@ void Plane::calc_nav_roll()
   keeping up good airspeed in FBWA mode easier, as the plane will
   automatically pitch down a little when at low throttle. It makes
   FBWA landings without stalling much easier.
+     为STAB_pitch_DOWN_cd调整nav_pitch_cd值。
+     这是为了使在FBWA模式下保持空速更容易
+     因为飞机在低油门时会自动俯仰一点。
+     它使FBWA着陆更容易，而不会失速。
  */
 void Plane::adjust_nav_pitch_throttle(void)
 {
@@ -798,12 +841,14 @@ void Plane::adjust_nav_pitch_throttle(void)
   calculate a new aerodynamic_load_factor and limit nav_roll_cd to
   ensure that the load factor does not take us below the sustainable
   airspeed
+   计算新的 aerodynamic_load_factor 和 limit nav_roll_cd
+   以确保无人机的空速不低于失速速度
  */
 void Plane::update_load_factor(void)
 {
     float demanded_roll = fabsf(nav_roll_cd*0.01f);
     if (demanded_roll > 85) {
-        // limit to 85 degrees to prevent numerical errors
+        // limit to 85 degrees to prevent numerical errors   // 限制为85度以防止数值错误
         demanded_roll = 85;
     }
     aerodynamic_load_factor = 1.0f / safe_sqrt(cosf(radians(demanded_roll)));
@@ -816,16 +861,16 @@ void Plane::update_load_factor(void)
 #endif
 
     if (!aparm.stall_prevention) {
-        // stall prevention is disabled
+        // stall prevention is disabled  熄火预防禁用
         return;
     }
     if (fly_inverted()) {
-        // no roll limits when inverted
+        // no roll limits when inverted  倒飞时无滚转限制
         return;
     }
 #if HAL_QUADPLANE_ENABLED
-    if (quadplane.tailsitter.active()) {
-        // no limits while hovering
+    if (quadplane.tailsitter.active()) {  // tailsitter  立式垂直起落飞机；（以尾部起落的）立式起落飞机
+        // no limits while hovering   盘旋时时无限制
         return;
     }
 #endif
@@ -833,7 +878,7 @@ void Plane::update_load_factor(void)
     float max_load_factor = smoothed_airspeed / MAX(aparm.airspeed_min, 1);
     if (max_load_factor <= 1) {
         // our airspeed is below the minimum airspeed. Limit roll to
-        // 25 degrees
+        // 25 degrees  空速低于最低空速，则将滚转限制为25度
         nav_roll_cd = constrain_int32(nav_roll_cd, -2500, 2500);
         roll_limit_cd = MIN(roll_limit_cd, 2500);
     } else if (max_load_factor < aerodynamic_load_factor) {
@@ -843,6 +888,10 @@ void Plane::update_load_factor(void)
         // allow at least 25 degrees of roll however, to ensure the
         // aircraft can be maneuvered with a bad airspeed estimate. At
         // 25 degrees the load factor is 1.1 (10%)
+        // 要求nav_roll 将使我们超过空气动力学负荷极限
+        // 将滚转角限制在一个滚转范围内内，使载荷保持在机身能够承受的范围内。
+        // 然而，我们总是允许至少25度的侧倾，以确保飞机能够以糟糕的估计空速进行操纵。
+        // 25度时，负载系数为1.1（10%）
         int32_t roll_limit = degrees(acosf(sq(1.0f / max_load_factor)))*100;
         if (roll_limit < 2500) {
             roll_limit = 2500;

@@ -20,18 +20,19 @@
 #include <utility>
 
 /*****************************************
-* Throttle slew limit
+* Throttle slew limit  油门斜率限制
 *****************************************/
 void Plane::throttle_slew_limit(SRV_Channel::Aux_servo_function_t func)
 {
 #if HAL_QUADPLANE_ENABLED
     const bool do_throttle_slew = (control_mode->does_auto_throttle() || quadplane.in_assisted_flight() || quadplane.in_vtol_mode());
+    //自动油门模式下、四旋翼固定翼飞机（quadplane）且处于辅助飞行状态（in_assisted_flight）或者 VTOl 模式（in_vtol_mode），启用斜率限制。
 #else
     const bool do_throttle_slew = control_mode->does_auto_throttle();
 #endif
 
     if (!do_throttle_slew) {
-        // only do throttle slew limiting in modes where throttle control is automatic
+        // only do throttle slew limiting in modes where throttle control is automatic  只在油门控制为自动模式下才执行油门斜率限制
         SRV_Channels::set_slew_rate(func, 0.0, 100, G_Dt);
         return;
     }
@@ -162,7 +163,7 @@ bool Plane::suppress_throttle(void)
   mixer for elevon and vtail channels setup using designated servo
   function values. This mixer operates purely on scaled values,
   allowing the user to trim and limit individual servos using the
-  SERVOn_* parameters
+  SERVOn_* parameters  平尾何垂尾的混控
  */
 void Plane::channel_function_mixer(SRV_Channel::Aux_servo_function_t func1_in, SRV_Channel::Aux_servo_function_t func2_in,
                                    SRV_Channel::Aux_servo_function_t func1_out, SRV_Channel::Aux_servo_function_t func2_out) const
@@ -207,10 +208,10 @@ void Plane::flaperon_update()
 
 
 /*
-  setup differential spoiler output channels
+  setup differential spoiler output channels //设置差动扰流板输出通道
 
   Differential spoilers are a type of elevon that is split on each
-  wing to give yaw control, mixed from rudder
+  wing to give yaw control, mixed from rudder  差动扰流板是一种分割在每个机翼上的副翼，用于提供偏航控制
  */
 void Plane::dspoiler_update(void)
 {
@@ -343,7 +344,7 @@ void Plane::airbrake_update(void)
 }
 
 /*
-  setup servos for idle mode
+  setup servos for idle mode  闲置模式
   Idle mode is used during balloon launch to keep servos still, apart
   from occasional wiggle to prevent freezing up
  */
@@ -404,11 +405,11 @@ void Plane::set_servos_manual_passthrough(void)
 }
 
 /*
-  Scale the throttle to conpensate for battery voltage drop
+  Scale the throttle to conpensate for battery voltage drop  要根据电池电压下降来缩放油门
  */
 void Plane::throttle_voltage_comp(int8_t &min_throttle, int8_t &max_throttle) const
 {
-    // return if not enabled, or setup incorrectly
+    // return if not enabled, or setup incorrectly  
     if (!is_positive(g2.fwd_thr_batt_voltage_min) || g2.fwd_thr_batt_voltage_min >= g2.fwd_thr_batt_voltage_max) {
         return;
     }
@@ -419,7 +420,7 @@ void Plane::throttle_voltage_comp(int8_t &min_throttle, int8_t &max_throttle) co
         return;
     }
 
-    // constrain read voltage to min and max params
+    // constrain read voltage to min and max params  将估计的静止电压限制在最小电压和最大电压的范围内。
     batt_voltage_resting_estimate = constrain_float(batt_voltage_resting_estimate,g2.fwd_thr_batt_voltage_min,g2.fwd_thr_batt_voltage_max);
 
     // don't apply compensation if the voltage is excessively low
@@ -440,7 +441,7 @@ void Plane::throttle_voltage_comp(int8_t &min_throttle, int8_t &max_throttle) co
 }
 
 /*
-  calculate any throttle limits based on the watt limiter
+  calculate any throttle limits based on the watt limiter  根据功率限制计算油门的限制范围,传递当前油门的最小和最大值
  */
 void Plane::throttle_watt_limiter(int8_t &min_throttle, int8_t &max_throttle)
 {
@@ -540,16 +541,29 @@ void Plane::set_servos_controlled(void)
 
     SRV_Channels::set_output_scaled(SRV_Channel::k_throttle,
                                     constrain_float(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle), min_throttle, max_throttle));
-    
+    // 如果飞机未处于软件解锁状态（!hal.util->get_soft_armed()），则根据飞机的启动要求进行设置。
+    // 如果启动要求为YES_ZERO_PWM（需要将PWM信号归零），则将油门输出限制为零。否则，将油门输出设置为零。
     if (!hal.util->get_soft_armed()) {
         if (arming.arming_required() == AP_Arming::Required::YES_ZERO_PWM) {
             SRV_Channels::set_output_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::ZERO_PWM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::ZERO_PWM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::ZERO_PWM);
         } else {
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 0.0);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, 0.0);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft1, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight1, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft2, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight2, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft3, 0.0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight3, 0.0);
         }
     } else if (suppress_throttle()) {
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 0.0); // default
@@ -719,9 +733,10 @@ void Plane::set_landing_gear(void)
  */
 void Plane::servos_twin_engine_mix(void)
 {
-    float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
-    float rud_gain = float(plane.g2.rudd_dt_gain) * 0.01f;
-    rudder_dt = rud_gain * SRV_Channels::get_output_scaled(SRV_Channel::k_rudder) / SERVO_MAX;
+    float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);  //获取当前油门输出
+    float rud_gain = float(plane.g2.rudd_dt_gain) * 0.01f;  //获取一个舵舵偏角增益值
+    rudder_dt = rud_gain * SRV_Channels::get_output_scaled(SRV_Channel::k_rudder) / SERVO_MAX;  
+    // 获取当前舵舵输出值，并将其乘以增益;并除以SERVO_MAX,将结果除以 “SERVO_MAX” 可以将值标准化到0到1的范围
 
 #if ADVANCED_FAILSAFE == ENABLED
     if (afs.should_crash_vehicle()) {
@@ -731,7 +746,6 @@ void Plane::servos_twin_engine_mix(void)
 #endif
 
     float throttle_left, throttle_right;
-
     if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
         // doing reverse thrust
         throttle_left  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
@@ -743,19 +757,95 @@ void Plane::servos_twin_engine_mix(void)
         throttle_left  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
         throttle_right = constrain_float(throttle - 50 * rudder_dt, 0, 100);
     }
-    if (!hal.util->get_soft_armed()) {
+
+    float throttle_left1,throttle_right1;
+    if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
+        // doing reverse thrust
+        throttle_left1  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
+        throttle_right1 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+    } else if (throttle <= 0) {
+        throttle_left1  = throttle_right1 = 0;
+    } else {
+        // doing forward thrust
+        throttle_left1  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
+        throttle_right1 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+    }
+
+    float throttle_left2,throttle_right2;
+    if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
+        // doing reverse thrust
+        throttle_left2  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
+        throttle_right2 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+    } else if (throttle <= 0) {
+        throttle_left2  = throttle_right2 = 0;
+    } else {
+        // doing forward thrust
+        throttle_left2  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
+        throttle_right2 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+    }
+
+    float throttle_left3,throttle_right3;
+    if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
+        // doing reverse thrust
+        throttle_left3  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
+        throttle_right3 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+    } else if (throttle <= 0) {
+       throttle_left3  = throttle_right3 = 0;
+
+    } else {
+        // doing forward thrust
+        throttle_left3  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
+        throttle_right3 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+    }
+    // 将计算得到的油门输出值应用到飞控的输出通道上
+    //代码通过检查hal.util->get_soft_armed()是否为假来判断飞机是否处于软件上的未解锁状态
+    /*
+    首先，代码通过检查hal.util->get_soft_armed()是否为假来判断飞机是否处于软件上的未解锁状态。
+    如果飞机处于未解锁状态，则根据arming.arming_required()的返回值进行不同的逻辑处理：
+    如果需要将油门输出设置为0（AP_Arming::Required::YES_ZERO_PWM），则通过SRV_Channels::set_output_limit()函数
+    将左引擎和右引擎的输出限制在零油门PWM值（ZERO_PWM）。
+    SRV_Channel::k_throttleLeft和SRV_Channel::k_throttleRight分别表示左引擎和右引擎的输出通道。
+    如果不需要设置油门输出为0，则通过SRV_Channels::set_output_scaled()函数将左引擎和右引擎的输出设置为0。
+    如果飞机处于解锁状态，则将计算得到的throttle_left和throttle_right应用到相应的输出通道上，
+    并使用throttle_slew_limit()函数限制油门变化的斜率（即限制油门的变化速度）。
+    */
+    if (!hal.util->get_soft_armed()) {    
         if (arming.arming_required() == AP_Arming::Required::YES_ZERO_PWM) {
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::ZERO_PWM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::ZERO_PWM);
+            SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::ZERO_PWM);
         } else {
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, 0);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft1, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight1, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft2, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight2, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft3, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight3, 0);
         }
     } else {
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, throttle_left);
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, throttle_right);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft1, throttle_left1);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight1, throttle_right1);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft2, throttle_left2);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight2, throttle_right2);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft3, throttle_left3);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight3, throttle_right3);
         throttle_slew_limit(SRV_Channel::k_throttleLeft);
         throttle_slew_limit(SRV_Channel::k_throttleRight);
+        throttle_slew_limit(SRV_Channel::k_throttleLeft1);
+        throttle_slew_limit(SRV_Channel::k_throttleRight1);
+        throttle_slew_limit(SRV_Channel::k_throttleLeft2);
+        throttle_slew_limit(SRV_Channel::k_throttleRight2);
+        throttle_slew_limit(SRV_Channel::k_throttleLeft3);
+        throttle_slew_limit(SRV_Channel::k_throttleRight3);
     }
 }
 
@@ -764,8 +854,12 @@ void Plane::servos_twin_engine_mix(void)
   For Fixed Wind modes with manual throttle control only. Forces tilts up and throttle to THR_MIN.
   Throttle stick must be in idle deadzone. This allows non-momentary switch to be used and quick bailouts
   for go-arounds. Also helps prevent propstrike after landing with switch release on ground.
+  通过 RCx_OPTION 开关设置油门、姿态（在 Attitude.cpp 中）和倾斜伺服系统以实现强制平展，
+  以便在 FW 模式下着陆。仅适用于具有手动油门控制的固定风模式。 
+  强制向上倾斜并将油门调至 THR_MIN。油门杆必须位于怠速死区。 这允许使用非瞬时开关并
+  快速紧急救援以进行复飞。 着陆后释放开关也有助于防止螺旋桨撞击。
 */
-void Plane::force_flare(void)
+void Plane::force_flare(void)  // 飞行器强制着陆的函数
 {
 #if HAL_QUADPLANE_ENABLED
     if (quadplane.in_transition() && plane.arming.is_armed()) { //allows for ground checking of flare tilts
@@ -798,6 +892,12 @@ void Plane::force_flare(void)
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, throttle_min);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, throttle_min);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft1, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight1, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft2, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight2, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft3, throttle_min);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight3, throttle_min);
         }
     }
 #endif
@@ -810,9 +910,13 @@ void Plane::force_flare(void)
   set_radio_out() is for when a raw PWM value of output is given which
   does not depend on any output scaling. Using set_servo() is for when
   scaling and mixing will be needed.
-
   Finally servos_output() is called to push the final PWM values
   for output channels
+
+  函数的实现方式是通过调用set_servo()和set_radio_out()函数来为通道构建输出值。
+  当给定一个与输出缩放无关的原始PWM值时，使用set_radio_out()函数。
+  当需要进行缩放和混合时，使用set_servo()函数。
+  最后，调用servos_output()函数将最终的PWM值推送到输出通道
 */
 void Plane::set_servos(void)
 {
@@ -896,7 +1000,7 @@ void Plane::set_servos(void)
 
     if (!arming.is_armed()) {
         //Some ESCs get noisy (beep error msgs) if PWM == 0.
-        //This little segment aims to avoid this.
+        //This little segment（部分） aims to avoid this.
         switch (arming.arming_required()) { 
         case AP_Arming::Required::NO:
             //keep existing behavior: do nothing to radio_out
@@ -907,6 +1011,12 @@ void Plane::set_servos(void)
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttle, 0);
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, 0);
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft1, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight1, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft2, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight2, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft3, 0);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight3, 0);
             break;
 
         case AP_Arming::Required::YES_MIN_PWM:
@@ -915,13 +1025,23 @@ void Plane::set_servos(void)
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, min_throttle);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, min_throttle);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft1, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight1, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft2, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight2, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft3, min_throttle);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight3, min_throttle);
             break;
         }
     }
 
-#if AP_ICENGINE_ENABLED
+#if AP_ICENGINE_ENABLED  //
     float override_pct = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
     if (g2.ice_control.throttle_override(override_pct, base_throttle)) {
+        /*
+        代码调用g2.ice_control.throttle_override()函数，将override_pct和之前获取的base_throttle作为参数传递给函数。
+        如果g2.ice_control.throttle_override()函数返回true，则表示IC引擎控制器想要覆盖油门，在启动、怠速或最大转速时进行调整。
+        */
         // the ICE controller wants to override the throttle for starting, idle, or redline
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, override_pct);
 #if HAL_QUADPLANE_ENABLED

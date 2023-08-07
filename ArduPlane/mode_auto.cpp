@@ -5,7 +5,7 @@ bool ModeAuto::_enter()
 {
 #if HAL_QUADPLANE_ENABLED
     // check if we should refuse auto mode due to a missing takeoff in
-    // guided_wait_takeoff state
+    // guided_wait_takeoff state  检查是否因为在引导等待起飞状态下没有起飞而应该拒绝自动模式。
     if (plane.previous_mode == &plane.mode_guided &&
         quadplane.guided_wait_takeoff_on_mode_enter) {
         if (!plane.mission.starts_with_takeoff_cmd()) {
@@ -24,7 +24,7 @@ bool ModeAuto::_enter()
     plane.auto_state.vtol_mode = false;
 #endif
     plane.next_WP_loc = plane.prev_WP_loc = plane.current_loc;
-    // start or resume the mission, based on MIS_AUTORESET
+    // start or resume the mission, based on MIS_AUTORESET 基于MIS_AUTORESET启动或恢复任务。
     plane.mission.start_or_resume();
 
     if (hal.util->was_watchdog_armed()) {
@@ -64,7 +64,9 @@ void ModeAuto::update()
 {
     if (plane.mission.state() != AP_Mission::MISSION_RUNNING) {
         // this could happen if AP_Landing::restart_landing_sequence() returns false which would only happen if:
+        // 如果AP_Landing:：restart_Landing_sequence（）返回false，
         // restart_landing_sequence() is called when not executing a NAV_LAND or there is no previous nav point
+        // 则可能发生这种情况，只有在不执行NAV_LAND或没有前一个导航点时调用：restart_Landing_ssequence()
         plane.set_mode(plane.mode_rtl, ModeReason::MISSION_END);
         gcs().send_text(MAV_SEVERITY_INFO, "Aircraft in auto without a running mission");
         return;
@@ -88,11 +90,12 @@ void ModeAuto::update()
         plane.calc_nav_roll();
         plane.calc_nav_pitch();
 
-        // allow landing to restrict the roll limits
+        // allow landing to restrict the roll limits  限制滚转以允许着陆
         plane.nav_roll_cd = plane.landing.constrain_roll(plane.nav_roll_cd, plane.g.level_roll_limit*100UL);
 
         if (plane.landing.is_throttle_suppressed()) {
             // if landing is considered complete throttle is never allowed, regardless of landing type
+            // 如果着陆被认为是满油门，无论着陆类型如何，都不允许
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 0.0);
         } else {
             plane.calc_throttle();
@@ -100,13 +103,14 @@ void ModeAuto::update()
 #if AP_SCRIPTING_ENABLED
     } else if (nav_cmd_id == MAV_CMD_NAV_SCRIPT_TIME) {
         // NAV_SCRIPTING has a desired roll and pitch rate and desired throttle
+        // NAV_SCRIPTING具有所需的滚转和俯仰速率以及所需的油门
         plane.nav_roll_cd = plane.ahrs.roll_sensor;
         plane.nav_pitch_cd = plane.ahrs.pitch_sensor;
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, plane.nav_scripting.throttle_pct);
 #endif
     } else {
         // we are doing normal AUTO flight, the special cases
-        // are for takeoff and landing
+        // are for takeoff and landing   正在进行正常的自动飞行，特殊情况是起飞和降落。
         if (nav_cmd_id != MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT) {
             plane.steer_state.hold_course_cd = -1;
         }

@@ -5,12 +5,13 @@
 
 /*
   allow for runtime change of control channel ordering
+  允许控制通道顺序实时更改
  */
 void Plane::set_control_channels(void)
 {
-    if (g.rudder_only) {
-        // in rudder only mode the roll and rudder channels are the
-        // same.
+    if (g.rudder_only) {  
+        // in rudder only mode the roll and rudder channels are the  
+        // same.  在 “仅使用方向舵” 模式下，滚转通道（roll channel）和方向舵通道（rudder channel）使用相同的通道
         channel_roll = RC_Channels::rc_channel(rcmap.yaw()-1);
     } else {
         channel_roll = RC_Channels::rc_channel(rcmap.roll()-1);
@@ -19,8 +20,8 @@ void Plane::set_control_channels(void)
     channel_throttle = RC_Channels::rc_channel(rcmap.throttle()-1);
     channel_rudder   = RC_Channels::rc_channel(rcmap.yaw()-1);
 
-    // set rc channel ranges
-    channel_roll->set_angle(SERVO_MAX);
+    // set rc channel ranges  设置遥控通道范围
+    channel_roll->set_angle(SERVO_MAX);  //set_angle() 函数来设置滚转通道（channel_roll）的角度为 SERVO_MAX
     channel_pitch->set_angle(SERVO_MAX);
     channel_rudder->set_angle(SERVO_MAX);
     if (!have_reverse_thrust()) {
@@ -38,6 +39,12 @@ void Plane::set_control_channels(void)
         SRV_Channels::set_angle(SRV_Channel::k_throttle, 100);
         SRV_Channels::set_angle(SRV_Channel::k_throttleLeft, 100);
         SRV_Channels::set_angle(SRV_Channel::k_throttleRight, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleLeft1, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleRight1, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleLeft2, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleRight2, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleLeft3, 100);
+        SRV_Channels::set_angle(SRV_Channel::k_throttleRight3, 100);
     }
 
     // update flap and airbrake channel assignment
@@ -62,15 +69,15 @@ void Plane::set_control_channels(void)
 }
 
 /*
-  initialise RC input channels
+  initialise RC input channels  初始化遥控输入
  */
 void Plane::init_rc_in()
 {
-    // set rc dead zones
-    channel_roll->set_default_dead_zone(30);
+    // set rc dead zones  设置通道死区，默认·均设置为30
+    channel_roll->set_default_dead_zone(30);  
     channel_pitch->set_default_dead_zone(30);
     channel_rudder->set_default_dead_zone(30);
-    channel_throttle->set_default_dead_zone(30);
+    channel_throttle->set_default_dead_zone(30); 
 }
 
 /*
@@ -83,11 +90,21 @@ void Plane::init_rc_out_main()
       change throttle trim to minimum throttle. This prevents a
       configuration error where the user sets CH3_TRIM incorrectly and
       the motor may start on power up
+      函数首先通过条件判断是否需要进行反推。如果没有反推功能，则将油门通道（k_throttle、k_throttleLeft、k_throttleRight）
+      的调整幅度（trim）设置为最小油门，以防止配置错误导致在上电时发动机启动。
+      接下来，代码设置了各个通道的失控保护限制。将副翼（aileron）、升降舵（elevator）、油门（throttle）、
+      左油门（throttleLeft）、右油门（throttleRight）和方向舵（rudder）通道的失控保护限制设置为修正值（trim）。
      */
     if (!have_reverse_thrust()) {
         SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttle);
         SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleLeft);
         SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleRight);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleLeft1);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleRight1);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleLeft2);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleRight2);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleLeft3);
+        SRV_Channels::set_trim_to_min_for(SRV_Channel::k_throttleRight3);
     }
 
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_aileron, SRV_Channel::Limit::TRIM);
@@ -96,6 +113,12 @@ void Plane::init_rc_out_main()
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_rudder, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::TRIM);
+    SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::TRIM);
 
 }
 

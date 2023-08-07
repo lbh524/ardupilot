@@ -199,6 +199,14 @@ public:
         k_rcin14_mapped         = 153,
         k_rcin15_mapped         = 154,
         k_rcin16_mapped         = 155,
+        //--------------------------------分布式电机
+        k_throttleLeft1          = 156,
+        k_throttleLeft2          = 157,
+        k_throttleLeft3          = 158,
+        k_throttleRight1         = 159,
+        k_throttleRight2         = 160, 
+        k_throttleRight3         = 161,         
+        //--------------------------------分布式电机
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 

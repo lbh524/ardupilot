@@ -358,12 +358,12 @@ void AP_TECS::update_50hz(void)
 
 void AP_TECS::_update_speed(float load_factor)
 {
-    // Calculate time in seconds since last update
+    // Calculate time in seconds since last update  计算更新时间/采样间隔
     uint64_t now = AP_HAL::micros64();
     float DT = (now - _update_speed_last_usec) * 1.0e-6f;
     _update_speed_last_usec = now;
 
-    // Convert equivalent airspeeds to true airspeeds
+    // Convert equivalent airspeeds to true airspeeds  转换等价的空速为真实的空速
 
     float EAS2TAS = _ahrs.get_EAS2TAS();
     _TAS_dem = _EAS_dem * EAS2TAS;
@@ -372,7 +372,7 @@ void AP_TECS::_update_speed(float load_factor)
 
     if (aparm.stall_prevention) {
         // when stall prevention is active we raise the mimimum
-        // airspeed based on aerodynamic load factor
+        // airspeed based on aerodynamic load factor   当失速发生时，根据 aerodynamic load factor 生成一个最小空速
         _TASmin *= load_factor;
     }
 
@@ -383,20 +383,20 @@ void AP_TECS::_update_speed(float load_factor)
         _TASmin = _TAS_dem;
     }
 
-    // limit the airspeed to a minimum of 3 m/s
+    // limit the airspeed to a minimum of 3 m/s  
     const float min_airspeed = 3.0;
 
-    // Reset states of time since last update is too large
+    // Reset states of time since last update is too large 如果距离上次更新太久，就重置时间
     if (DT > 1.0f) {
         _TAS_state = (_EAS * EAS2TAS);
         _TAS_state = MAX(_TAS_state, min_airspeed);
         _integDTAS_state = 0.0f;
         DT            = 0.1f; // when first starting TECS, use a
-        // small time constant
+        // small time constant    第一次开启TECS，使用一个较小的时间常量
     }
 
     // Get measured airspeed or default to trim speed and constrain to range between min and max if
-    // airspeed sensor data cannot be used
+    // airspeed sensor data cannot be used  获取空速，或者在没有使用空速并且设置速度的速率为0的情况下，默认空速为最大最小值和的一半
     bool use_airspeed = _use_synthetic_airspeed_once || _use_synthetic_airspeed.get() || _ahrs.airspeed_sensor_enabled();
     if (!use_airspeed || !_ahrs.airspeed_estimate(_EAS)) {
         // If no airspeed available use average of min and max
@@ -405,10 +405,10 @@ void AP_TECS::_update_speed(float load_factor)
 
     // Implement a second order complementary filter to obtain a
     // smoothed airspeed estimate
-    // airspeed estimate is held in _TAS_state
+    // airspeed estimate is held in _TAS_state  执行一个二阶互补滤波来获得比较圆滑的空速估计值，并且保存到_TAS_state
     float aspdErr = (_EAS * EAS2TAS) - _TAS_state;
     float integDTAS_input = aspdErr * _spdCompFiltOmega * _spdCompFiltOmega;
-    // Prevent state from winding up
+    // Prevent state from winding up  防止空速被卷起
     if (_TAS_state < 3.1f) {
         integDTAS_input = MAX(integDTAS_input, 0.0f);
     }
@@ -998,7 +998,7 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
     _hgt_dem = hgt_dem_cm * 0.01f;
     _EAS_dem = EAS_dem_cm * 0.01f;
 
-    // Update the speed estimate using a 2nd order complementary filter
+    // Update the speed estimate using a 2nd order complementary filter// 二阶互补滤波器估计出速度
     _update_speed(load_factor);
 
     if (aparm.takeoff_throttle_max != 0 &&
@@ -1113,22 +1113,22 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
     // initialise selected states and variables if DT > 1 second or in climbout
     _initialise_states(ptchMinCO_cd, hgt_afe);
 
-    // Calculate Specific Total Energy Rate Limits
+    // Calculate Specific Total Energy Rate Limits // 更新总体能量速率限制
     _update_STE_rate_lim();
 
-    // Calculate the speed demand
+    // Calculate the speed demand  // 更新出速度的目标值
     _update_speed_demand();
 
-    // Calculate the height demand
+    // Calculate the height demand   更新出高度的目标值
     _update_height_demand();
 
-    // Detect underspeed condition
+    // Detect underspeed condition  检测是否欠速
     _detect_underspeed();
 
-    // Calculate specific energy quantitiues
+    // Calculate specific energy quantitiues   // 更新势能、动能的目标与估计值
     _update_energies();
 
-    // Calculate throttle demand - use simple pitch to throttle if no
+    // Calculate throttle demand - use simple pitch to throttle if no  更新油门的目标值 - 如果没有空速计，就用简单的pitch到油门
     // airspeed sensor.
     // Note that caller can demand the use of
     // synthetic airspeed for one loop if needed. This is required
@@ -1147,7 +1147,7 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
         _flags.badDescent = false;
     }
 
-    // Calculate pitch demand
+    // Calculate pitch demand   // 更新出俯仰角的目标值
     _update_pitch();
 
     if (AP::logger().should_log(_log_bitmask)){

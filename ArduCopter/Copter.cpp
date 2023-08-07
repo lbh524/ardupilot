@@ -116,7 +116,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     FAST_TASK(run_rate_controller),
 #if AC_CUSTOMCONTROL_MULTI_ENABLED == ENABLED
     FAST_TASK(run_custom_controller),
-#endif
+#endif  
     // send outputs to the motors library immediately
     FAST_TASK(motors_output),
      // run EKF state estimator (expensive)

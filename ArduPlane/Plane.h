@@ -785,6 +785,8 @@ private:
     static const struct LogStructure log_structure[];
 
     // rudder mixing gain for differential thrust (0 - 1)
+    // 用于微调（rudder）控制的差动推力（differential thrust）。它是一个浮点型的变量，
+    // 范围在0到1之间。这个变量的具体值取决于你想要的微调效果。
     float rudder_dt;
 
     // soaring mode-change timer
