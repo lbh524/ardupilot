@@ -257,10 +257,10 @@ private:
     float _TASmax;
     float _TASmin;
 
-    // Current true airspeed demand
+    // Current true airspeed demand  当前真实空速需求
     float _TAS_dem;
 
-    // Equivalent airspeed demand
+    // Equivalent airspeed demand  等效空速需求
     float _EAS_dem;
 
     // height demands

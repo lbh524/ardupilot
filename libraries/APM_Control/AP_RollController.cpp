@@ -229,11 +229,11 @@ float AP_RollController::get_servo_out(int32_t angle_err, float scaler, bool dis
         gains.tau.set(0.05f);
     }
 
-    // Calculate the desired roll rate (deg/sec) from the angle error
+    // Calculate the desired roll rate (deg/sec) from the angle error   从角度误差计算期望的横滚角速率（度/秒 )
     angle_err_deg = angle_err * 0.01;
     float desired_rate = angle_err_deg/ gains.tau;
 
-    // Limit the demanded roll rate
+    // Limit the demanded roll rate   限制要求的横滚角速率
     if (gains.rmax_pos && desired_rate < -gains.rmax_pos) {
         desired_rate = - gains.rmax_pos;
     } else if (gains.rmax_pos && desired_rate > gains.rmax_pos) {

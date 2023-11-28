@@ -26,15 +26,17 @@
 
 extern const AP_HAL::HAL& hal;
 
-void AP_AHRS_Backend::init()
+void AP_AHRS_Backend::init()  //实现姿态和导航解算的后端部分
 {
 }
 
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
+// 使用最新的惯性导航系统数据（可能尚未被扩展卡尔曼滤波器（EKF）使用）返回平滑且校正后的陀螺仪向量
+
 Vector3f AP_AHRS::get_gyro_latest(void) const
 {
     const uint8_t primary_gyro = get_primary_gyro_index();
-    return AP::ins().get_gyro(primary_gyro) + get_gyro_drift();
+    return AP::ins().get_gyro(primary_gyro) + get_gyro_drift();  // 加上陀螺漂移
 }
 
 // set_trim

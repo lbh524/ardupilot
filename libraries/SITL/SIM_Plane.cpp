@@ -308,7 +308,7 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
         throttle = filtered_servo_range(input, 2);
     }
     
-    float thrust     = throttle;
+    float thrust = throttle;     // 推力等于油门  
 
     battery_voltage = sitl->batt_voltage - 0.7*throttle;
     battery_current = 50.0f*throttle;
@@ -359,7 +359,7 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
     // scale thrust to newtons
     thrust *= thrust_scale;
 
-    accel_body = Vector3f(thrust, 0, 0) + force;
+    accel_body = Vector3f(thrust, 0, 0) + force;    //发动机的推力
     accel_body /= mass;
 
     // add some noise

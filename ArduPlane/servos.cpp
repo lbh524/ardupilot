@@ -18,7 +18,7 @@
 
 #include "Plane.h"
 #include <utility>
-
+#include <cmath>
 /*****************************************
 * Throttle slew limit  油门斜率限制
 *****************************************/
@@ -733,10 +733,10 @@ void Plane::set_landing_gear(void)
  */
 void Plane::servos_twin_engine_mix(void)
 {
-    float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);  //获取当前油门输出
-    float rud_gain = float(plane.g2.rudd_dt_gain) * 0.01f;  //获取一个舵舵偏角增益值
+    float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);  //获取当前油门输出-100-100
+    float rud_gain = float(plane.g2.rudd_dt_gain) * 0.01f;  //获取一个舵舵偏角增益值80
     rudder_dt = rud_gain * SRV_Channels::get_output_scaled(SRV_Channel::k_rudder) / SERVO_MAX;  
-    // 获取当前舵舵输出值，并将其乘以增益;并除以SERVO_MAX,将结果除以 “SERVO_MAX” 可以将值标准化到0到1的范围
+    // 获取当前舵舵输出值，将其乘以增益;并除以SERVO_MAX,将结果除以 “SERVO_MAX” 可以将值标准化到0到1的范围
 
 #if ADVANCED_FAILSAFE == ENABLED
     if (afs.should_crash_vehicle()) {
@@ -745,57 +745,64 @@ void Plane::servos_twin_engine_mix(void)
     }
 #endif
 
-    float throttle_left, throttle_right;
+    float throttle_left, throttle_right, delta_thro;
     if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
         // doing reverse thrust
-        throttle_left  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
-        throttle_right = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+        delta_thro = throttle*1.2536 + 7.6749;
+        throttle_left  = constrain_float( delta_thro + 160 * rudder_dt, -100, 0);
+        throttle_right = constrain_float(throttle - 160 * rudder_dt, -100, 0);
     } else if (throttle <= 0) {
         throttle_left  = throttle_right = 0;
     } else {
         // doing forward thrust
-        throttle_left  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
-        throttle_right = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+        delta_thro = throttle*1.2536 + 7.6749;
+        throttle_left  = constrain_float(delta_thro + 160* rudder_dt, 0, 100);
+        throttle_right = constrain_float(throttle - 160 * rudder_dt, 0, 100);
     }
 
-    float throttle_left1,throttle_right1;
+    float throttle_left1,throttle_right1, delta_thro1;
     if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
         // doing reverse thrust
-        throttle_left1  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
-        throttle_right1 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+        delta_thro1 = throttle;
+        throttle_left1  = constrain_float(delta_thro1 + 120 * rudder_dt, -100, 0);
+        throttle_right1 = constrain_float(throttle - 120 * rudder_dt, -100, 0);
     } else if (throttle <= 0) {
         throttle_left1  = throttle_right1 = 0;
     } else {
         // doing forward thrust
-        throttle_left1  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
-        throttle_right1 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+        delta_thro1 = throttle;
+        throttle_left1  = constrain_float(delta_thro1 + 120 * rudder_dt, 0, 100);
+        throttle_right1 = constrain_float(throttle - 120 * rudder_dt, 0, 100);
     }
 
-    float throttle_left2,throttle_right2;
+    float throttle_left2,throttle_right2, delta_thro2;
     if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
         // doing reverse thrust
-        throttle_left2  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
-        throttle_right2 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+        delta_thro2 = throttle*1.1339 + 4.0527;
+        throttle_left2  = constrain_float(delta_thro2 + 80 * rudder_dt, -100, 0);
+        throttle_right2 = constrain_float(throttle - 80 * rudder_dt, -100, 0);
     } else if (throttle <= 0) {
         throttle_left2  = throttle_right2 = 0;
     } else {
         // doing forward thrust
-        throttle_left2  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
-        throttle_right2 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+        delta_thro2 = throttle*1.1339 + 4.0527;
+        throttle_left2  = constrain_float(delta_thro2 + 80 * rudder_dt, 0, 100);
+        throttle_right2 = constrain_float(throttle - 80 * rudder_dt, 0, 100);
     }
 
-    float throttle_left3,throttle_right3;
+    float throttle_left3,throttle_right3, delta_thro3;
     if (throttle < 0 && have_reverse_thrust() && allow_reverse_thrust()) {
         // doing reverse thrust
-        throttle_left3  = constrain_float(throttle + 50 * rudder_dt, -100, 0);
-        throttle_right3 = constrain_float(throttle - 50 * rudder_dt, -100, 0);
+        delta_thro3 = throttle*1.069 + 2.0899;
+        throttle_left3  = constrain_float(delta_thro3 + 40* rudder_dt, -100, 0);
+        throttle_right3 = constrain_float(throttle - 40 * rudder_dt, -100, 0);
     } else if (throttle <= 0) {
        throttle_left3  = throttle_right3 = 0;
-
     } else {
         // doing forward thrust
-        throttle_left3  = constrain_float(throttle + 50 * rudder_dt, 0, 100);
-        throttle_right3 = constrain_float(throttle - 50 * rudder_dt, 0, 100);
+        delta_thro3 = throttle*1.069 + 2.0899;
+        throttle_left3  = constrain_float(delta_thro3 + 40 * rudder_dt, 0, 100);
+        throttle_right3 = constrain_float(throttle - 40 * rudder_dt, 0, 100);
     }
     // 将计算得到的油门输出值应用到飞控的输出通道上
     //代码通过检查hal.util->get_soft_armed()是否为假来判断飞机是否处于软件上的未解锁状态

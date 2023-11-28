@@ -86,12 +86,12 @@ void AP_AdvancedFailsafe_Plane::setup_IO_failsafe(void)
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::TRIM);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft, SRV_Channel::Limit::TRIM);
-        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft1, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight1, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft2, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight2, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleLeft3, SRV_Channel::Limit::TRIM);
+        SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttleRight3, SRV_Channel::Limit::TRIM);
     } else {
         // normal throttle, use MIN
         SRV_Channels::set_failsafe_limit(SRV_Channel::k_throttle, SRV_Channel::Limit::MIN);

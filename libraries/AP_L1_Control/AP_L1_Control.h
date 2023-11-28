@@ -107,7 +107,7 @@ private:
 
     // L1 tracking loop period (sec)
     AP_Float _L1_period;
-    // L1 tracking loop damping ratio
+    // L1 tracking loop damping ratio  L1跟踪环路阻尼比
     AP_Float _L1_damping;
 
     // previous value of cross-track velocity

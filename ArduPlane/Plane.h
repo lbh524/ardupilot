@@ -789,6 +789,8 @@ private:
     // 范围在0到1之间。这个变量的具体值取决于你想要的微调效果。
     float rudder_dt;
 
+    
+
     // soaring mode-change timer
     uint32_t soaring_mode_timer_ms;
 

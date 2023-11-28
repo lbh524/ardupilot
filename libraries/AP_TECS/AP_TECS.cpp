@@ -356,8 +356,9 @@ void AP_TECS::update_50hz(void)
 
 }
 
-void AP_TECS::_update_speed(float load_factor)
+void AP_TECS::_update_speed(float load_factor)  //     _integDTAS_state = _integDTAS_state + integDTAS_input * DT;
 {
+    //  float TAS_input = _integDTAS_state + _vel_dot + aspdErr * _spdCompFiltOmega * 1.4142f;
     // Calculate time in seconds since last update  计算更新时间/采样间隔
     uint64_t now = AP_HAL::micros64();
     float DT = (now - _update_speed_last_usec) * 1.0e-6f;
@@ -397,7 +398,7 @@ void AP_TECS::_update_speed(float load_factor)
 
     // Get measured airspeed or default to trim speed and constrain to range between min and max if
     // airspeed sensor data cannot be used  获取空速，或者在没有使用空速并且设置速度的速率为0的情况下，默认空速为最大最小值和的一半
-    bool use_airspeed = _use_synthetic_airspeed_once || _use_synthetic_airspeed.get() || _ahrs.airspeed_sensor_enabled();
+    bool use_airspeed = _use_synthetic_airspeed_once || _use_synthetic_airspeed.get() || _ahrs.airspeed_sensor_enabled();    // 使用空速
     if (!use_airspeed || !_ahrs.airspeed_estimate(_EAS)) {
         // If no airspeed available use average of min and max
         _EAS = constrain_float(0.01f * (float)aparm.airspeed_cruise_cm.get(), (float)aparm.airspeed_min.get(), (float)aparm.airspeed_max.get());
@@ -406,8 +407,8 @@ void AP_TECS::_update_speed(float load_factor)
     // Implement a second order complementary filter to obtain a
     // smoothed airspeed estimate
     // airspeed estimate is held in _TAS_state  执行一个二阶互补滤波来获得比较圆滑的空速估计值，并且保存到_TAS_state
-    float aspdErr = (_EAS * EAS2TAS) - _TAS_state;
-    float integDTAS_input = aspdErr * _spdCompFiltOmega * _spdCompFiltOmega;
+    float aspdErr = (_EAS * EAS2TAS) - _TAS_state;  //_EAS（等效空速）乘以 EAS2TAS（等效空速到真空速的转换因子），然后从结果中减去 _TAS_state（真空速状态）
+    float integDTAS_input = aspdErr * _spdCompFiltOmega * _spdCompFiltOmega;   // 积分增量输入
     // Prevent state from winding up  防止空速被卷起
     if (_TAS_state < 3.1f) {
         integDTAS_input = MAX(integDTAS_input, 0.0f);

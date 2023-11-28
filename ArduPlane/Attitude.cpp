@@ -136,6 +136,7 @@ void Plane::stabilize_roll(float speed_scaler)
     SRV_Channels::set_output_scaled(SRV_Channel::k_aileron, roll_out);
 }
 
+
 float Plane::stabilize_roll_get_roll_out(float speed_scaler)
 {
 #if HAL_QUADPLANE_ENABLED
@@ -181,6 +182,7 @@ void Plane::stabilize_pitch(float speed_scaler)
     const float pitch_out = stabilize_pitch_get_pitch_out(speed_scaler);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, pitch_out);
 }
+
 
 float Plane::stabilize_pitch_get_pitch_out(float speed_scaler)
 {
@@ -294,7 +296,7 @@ void Plane::stabilize_stick_mixing_fbw()
         control_mode == &mode_qautotune ||
 #endif
 #endif  // HAL_QUADPLANE_ENABLED
-        control_mode == &mode_training) {
+        control_mode == &mode_training) { 
         return;
     }
     // do FBW style stick mixing. We don't treat it linearly
@@ -392,7 +394,7 @@ void Plane::stabilize_yaw(float speed_scaler)
 
 
 /*
-  a special stabilization function for training mode  计算 steering_control.方向控制采用方向舵
+  a special stabilization function for training mode 
  */
 void Plane::stabilize_training(float speed_scaler)
 {
@@ -613,7 +615,7 @@ void Plane::calc_throttle()
 {
     if (aparm.throttle_cruise <= 1) {
         // user has asked for zero throttle - this may be done by a
-        // mission which wants to turn off the engine for a parachute
+        // mission which wants to turn off the engine for a parachute  降落伞
         // landing
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 0.0);
         return;

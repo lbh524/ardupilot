@@ -6,9 +6,9 @@ cd "\Program Files\%FGDIR%\bin"
 fgfs ^
     --native-fdm=socket,in,10,,5503,udp ^
     --fdm=external ^
-    --aircraft=p2006t ^
+    --aircraft=Rascal110-JSBSim ^
     --fg-aircraft=%AUTOTESTDIR% ^
-    --airport=PHNL ^
+    --airport=KSFO ^
     --geometry=650x550 ^
     --bpp=32 ^
     --disable-hud-3d ^
